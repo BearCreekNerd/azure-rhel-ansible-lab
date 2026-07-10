@@ -35,6 +35,69 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Compute remote state backend names
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo_name="${GITHUB_REPOSITORY#*/}"
+          repo_name_lower="$(echo "$repo_name" | tr '[:upper:]' '[:lower:]')"
+          sanitized_repo_name="$(echo "$repo_name_lower" | tr -cd 'a-z0-9')"
+          storage_name_prefix="${sanitized_repo_name:0:14}"
+          subscription_suffix="$(echo "${{ secrets.AZURE_SUBSCRIPTION_ID }}" | tr -d '-' | tr '[:upper:]' '[:lower:]' | cut -c1-8)"
+
+          if [ -z "$storage_name_prefix" ]; then
+            storage_name_prefix="$(echo "repo${GITHUB_REPOSITORY_ID}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9')"
+            storage_name_prefix="${storage_name_prefix:0:14}"
+          fi
+
+          # Keep this naming pattern aligned with the README remote state documentation.
+          echo "TF_STATE_RESOURCE_GROUP=rg-${repo_name_lower}-tfstate" >> "$GITHUB_ENV"
+          # Azure storage account names are limited to 24 characters, so this uses:
+          # - 2 characters for the `st` prefix
+          # - 14 characters from the sanitized repo name
+          # - 8 characters from the subscription ID suffix
+          echo "TF_STATE_STORAGE_ACCOUNT=st${storage_name_prefix}${subscription_suffix}" >> "$GITHUB_ENV"
+          echo "TF_STATE_CONTAINER=tfstate" >> "$GITHUB_ENV"
+          echo "TF_STATE_KEY=${repo_name_lower}.tfstate" >> "$GITHUB_ENV"
+
+      - name: Ensure Azure remote state backend exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          az group create \
+            --name "$TF_STATE_RESOURCE_GROUP" \
+            --location eastus
+
+          az storage account create \
+            --name "$TF_STATE_STORAGE_ACCOUNT" \
+            --resource-group "$TF_STATE_RESOURCE_GROUP" \
+            --location eastus \
+            --sku Standard_LRS \
+            --kind StorageV2 \
+            --https-only true \
+            --min-tls-version TLS1_2 \
+            --allow-blob-public-access false
+
+          state_access_key="$(az storage account keys list \
+            --account-name "$TF_STATE_STORAGE_ACCOUNT" \
+            --resource-group "$TF_STATE_RESOURCE_GROUP" \
+            --query '[0].value' \
+            --output tsv)"
+
+          if [ -z "$state_access_key" ]; then
+            echo "Failed to retrieve the Terraform state storage account access key." >&2
+            exit 1
+          fi
+
+          echo "::add-mask::$state_access_key"
+          echo "TF_STATE_ACCESS_KEY=$state_access_key" >> "$GITHUB_ENV"
+
+          az storage container create \
+            --name "$TF_STATE_CONTAINER" \
+            --account-name "$TF_STATE_STORAGE_ACCOUNT" \
+            --account-key "$state_access_key" \
+            --auth-mode key
+
       - name: Write SSH keys for Terraform and Ansible
         shell: bash
         run: |
@@ -46,7 +109,13 @@ jobs:
 
       - name: Terraform init
         shell: bash
-        run: terraform init
+        run: |
+          terraform init -reconfigure \
+            -backend-config="resource_group_name=$TF_STATE_RESOURCE_GROUP" \
+            -backend-config="storage_account_name=$TF_STATE_STORAGE_ACCOUNT" \
+            -backend-config="container_name=$TF_STATE_CONTAINER" \
+            -backend-config="key=$TF_STATE_KEY" \
+            -backend-config="access_key=$TF_STATE_ACCESS_KEY"
 
       - name: Terraform validate
         shell: bash

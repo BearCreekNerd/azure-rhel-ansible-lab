@@ -45,36 +45,36 @@ variable "ssh_source_cidr" {
 }
 
 variable "vnet_name" {
-  type        = string
-  default     = "vnet-ansible-safe"
+  type    = string
+  default = "vnet-ansible-safe"
 }
 
 variable "vnet_cidr" {
-  type        = string
-  default     = "10.20.0.0/16"
+  type    = string
+  default = "10.20.0.0/16"
 }
 
 variable "workload_subnet_name" {
-  type        = string
-  default     = "workload-subnet"
+  type    = string
+  default = "workload-subnet"
 }
 
 variable "workload_subnet_cidr" {
-  type        = string
-  default     = "10.20.1.0/24"
+  type    = string
+  default = "10.20.1.0/24"
 }
 
 variable "nsg_name" {
-  type        = string
-  default     = "nsg-workload"
+  type    = string
+  default = "nsg-workload"
 }
 
 variable "nic_name" {
-  type        = string
-  default     = "nic-rhel-safe-01"
+  type    = string
+  default = "nic-rhel-safe-01"
 }
 
 variable "vm_public_ip_name" {
-  type        = string
-  default     = "pip-rhel-safe-01"
+  type    = string
+  default = "pip-rhel-safe-01"
 }
