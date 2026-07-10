@@ -3,7 +3,7 @@ resource_group_name = "rg-ansible-safe-lab"
 vm_name             = "rhel-ansible-safe-01"
 admin_username      = "azureuser"
 vm_size             = "Standard_B2s"
-ssh_public_key_path = "~/.ssh/id_ed25519.pub"
+ssh_public_key       = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... user@host"
 ssh_source_cidr     = "0.0.0.0/0"
 
 vnet_name            = "vnet-ansible-safe"

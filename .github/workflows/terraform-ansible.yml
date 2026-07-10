@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TF_IN_AUTOMATION: true
+      TF_VAR_ssh_public_key: ${{ secrets.TF_VAR_ssh_public_key }}
 
     steps:
       - name: Checkout
@@ -40,7 +41,7 @@ jobs:
           mkdir -p "$HOME/.ssh"
           printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > "$HOME/.ssh/id_ed25519"
           chmod 600 "$HOME/.ssh/id_ed25519"
-          printf '%s\n' "${{ secrets.SSH_PUBLIC_KEY }}" > "$HOME/.ssh/id_ed25519.pub"
+          printf '%s\n' "${{ secrets.TF_VAR_ssh_public_key }}" > "$HOME/.ssh/id_ed25519.pub"
           chmod 644 "$HOME/.ssh/id_ed25519.pub"
 
       - name: Terraform init
@@ -53,7 +54,7 @@ jobs:
 
       - name: Terraform plan
         shell: bash
-        run: terraform plan -out tfplan -var "ssh_public_key_path=$HOME/.ssh/id_ed25519.pub"
+        run: terraform plan -out tfplan
 
       - name: Terraform apply
         shell: bash
