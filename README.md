@@ -25,24 +25,38 @@
    # edit terraform.tfvars
    ```
 
-3. Deploy:
+3. Initialize Terraform:
+   - use the Azure Storage remote state backend:
+     ```bash
+     terraform init \
+       -backend-config="resource_group_name=rg-azure-rhel-ansible-lab-tfstate" \
+       -backend-config="storage_account_name=<your_tfstate_storage_account>" \
+       -backend-config="container_name=tfstate" \
+       -backend-config="key=azure-rhel-ansible-lab.tfstate" \
+       -backend-config="access_key=<storage_account_access_key>"
+     ```
+   - or keep state local for one-off work:
+     ```bash
+     terraform init -backend=false
+     ```
+
+4. Deploy:
    ```bash
-   terraform init
    terraform plan
    terraform apply
    ```
 
-4. Get the VM public IP:
+5. Get the VM public IP:
    ```bash
    terraform output vm_public_ip
    ```
 
-5. Test SSH directly:
+6. Test SSH directly:
    ```bash
    ssh azureuser@<VM_PUBLIC_IP>
    ```
 
-6. Use with Ansible inventory:
+7. Use with Ansible inventory:
    ```ini
    [rhel]
    rhel-safe ansible_host=<VM_PUBLIC_IP> ansible_user=azureuser ansible_ssh_private_key_file=~/.ssh/id_ed25519
@@ -88,11 +102,22 @@ terraform destroy
 
 This repo includes a workflow at `.github/workflows/terraform-ansible.yml` that:
 - logs into Azure
+- creates or reuses an Azure Storage account/container for Terraform remote state
 - runs `terraform init/plan/apply`
 - creates a dynamic Ansible inventory from Terraform outputs
 - runs both playbooks:
    - `ansible/setup-golang-dotnet10.yml`
    - `ansible/update-rhel-playbook.yml`
+
+### Remote state backend
+
+GitHub Actions bootstraps a dedicated backend automatically before `terraform init`:
+- resource group: `rg-azure-rhel-ansible-lab-tfstate`
+- container: `tfstate`
+- state key: `azure-rhel-ansible-lab.tfstate`
+- storage account name: derived from the repo name plus the first 8 characters of `AZURE_SUBSCRIPTION_ID`
+
+No additional GitHub secret is required for the backend. The workflow reuses the existing Azure OIDC secrets to create the storage account, then retrieves the storage account access key during the run and passes it to `terraform init`.
 
 ### Setting your SSH public key secret
 
@@ -159,7 +184,7 @@ OIDC setup (recommended, no long-lived Azure client secret):
    AZURE_TENANT_ID=<TENANT_ID>
    AZURE_SUBSCRIPTION_ID=<SUBSCRIPTION_ID>
    SSH_PRIVATE_KEY=<private key content>
-   SSH_PUBLIC_KEY=<public key content>
+   TF_VAR_ssh_public_key=<public key content>
    ```
 
 Trigger options:
