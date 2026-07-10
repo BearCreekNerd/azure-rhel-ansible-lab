@@ -100,11 +100,10 @@ jobs:
           [rhel]
           rhel-safe ansible_host=${{ steps.tf_outputs.outputs.vm_public_ip }} ansible_user=${{ steps.tf_outputs.outputs.admin_username }} ansible_ssh_private_key_file=$HOME/.ssh/id_ed25519 ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new'
           EOF
-
-      - name: Run Ansible setup playbook
-        shell: bash
-        run: ansible-playbook -i ansible/inventory.ci.ini ansible/setup-golang-dotnet10.yml
-
       - name: Run Ansible update playbook
         shell: bash
         run: ansible-playbook -i ansible/inventory.ci.ini ansible/update-rhel-playbook.yml
+    
+      - name: Run Ansible setup playbook
+        shell: bash
+        run: ansible-playbook -i ansible/inventory.ci.ini ansible/setup-golang-dotnet10.yml
