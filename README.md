@@ -115,7 +115,8 @@ GitHub Actions bootstraps a dedicated backend automatically before `terraform in
 - resource group: `rg-<lowercase repo name>-tfstate` (for this repo: `rg-azure-rhel-ansible-lab-tfstate`)
 - container: `tfstate`
 - state key: `<lowercase repo name>.tfstate` (for this repo: `azure-rhel-ansible-lab.tfstate`)
-- storage account name: `st<first 14 alphanumeric chars of the lowercase repo name><first 8 lowercase alphanumeric chars of AZURE_SUBSCRIPTION_ID after removing hyphens>` (for example, this repo becomes `stazurerhelansib1234abcd` when the subscription suffix is `1234abcd`)
+- storage account name: `st<first 14 alphanumeric chars of the lowercase repo name><first 8 lowercase alphanumeric chars of AZURE_SUBSCRIPTION_ID after removing hyphens>` (for example: `st` + `azurerhelansib` + `1234abcd` = `stazurerhelansib1234abcd`)
+- fallback: if a repo name ever sanitizes to an empty string, the workflow uses `repo<GITHUB_REPOSITORY_ID>` as the prefix source instead
 
 No additional GitHub secret is required for the backend. The workflow reuses the existing Azure OIDC secrets to create the storage account, then retrieves the storage account access key during the run and passes it to `terraform init`.
 
