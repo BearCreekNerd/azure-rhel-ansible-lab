@@ -1,0 +1,17 @@
+location            = "eastus"
+resource_group_name = "rg-ansible-safe-lab"
+vm_name             = "rhel-ansible-safe-01"
+admin_username      = "azureuser"
+vm_size             = "Standard_B2s"
+ssh_public_key_path = "~/.ssh/id_ed25519.pub"
+
+vnet_name            = "vnet-ansible-safe"
+vnet_cidr            = "10.20.0.0/16"
+workload_subnet_name = "workload-subnet"
+workload_subnet_cidr = "10.20.1.0/24"
+bastion_subnet_cidr  = "10.20.2.0/26"
+
+nsg_name         = "nsg-workload"
+nic_name         = "nic-rhel-safe-01"
+bastion_name     = "bas-ansible-safe"
+bastion_pip_name = "pip-bastion-ansible-safe"
