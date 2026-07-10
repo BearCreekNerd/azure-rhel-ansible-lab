@@ -83,3 +83,22 @@ If you see `Failed to validate GPG signature ... Public key for packages-microso
 ```bash
 terraform destroy
 ```
+
+## GitHub Actions: Terraform + Ansible
+
+This repo includes a workflow at `.github/workflows/terraform-ansible.yml` that:
+- logs into Azure
+- runs `terraform init/plan/apply`
+- creates a dynamic Ansible inventory from Terraform outputs
+- runs both playbooks:
+   - `ansible/setup-golang-dotnet10.yml`
+   - `ansible/update-rhel-playbook.yml`
+
+Required repository secrets:
+- `AZURE_CREDENTIALS` (service principal JSON for `azure/login`)
+- `SSH_PRIVATE_KEY` (private key matching the public key below)
+- `SSH_PUBLIC_KEY` (public key used by Terraform for VM provisioning)
+
+Trigger options:
+- manual: Actions -> Terraform + Ansible -> Run workflow
+- automatic on push to `main` when Terraform, Ansible, or workflow files change
