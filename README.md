@@ -1,13 +1,10 @@
-# Azure RHEL + Bastion Starter (for Ansible)
+# Azure RHEL VM Starter (for Ansible)
 
 ## What this creates
 - Resource Group
-- VNet + subnets:
-  - `workload-subnet`
-  - `AzureBastionSubnet`
-- NSG allowing SSH from VirtualNetwork only
-- Bastion host + Public IP
-- RHEL 9 VM (private IP only, no public IP)
+- VNet + workload subnet
+- NSG allowing SSH from your configured source CIDR
+- RHEL 9 VM with a public IP
 
 ## Prereqs
 - Terraform >= 1.6
@@ -35,22 +32,36 @@
    terraform apply
    ```
 
-4. Start Bastion tunnel (PowerShell):
-   ```powershell
-   .\scripts\start-bastion-tunnel.ps1
-   ```
-   Keep it running in a terminal.
-
-5. Test SSH:
+4. Get the VM public IP:
    ```bash
-   ssh -p 50022 azureuser@127.0.0.1
+   terraform output vm_public_ip
+   ```
+
+5. Test SSH directly:
+   ```bash
+   ssh azureuser@<VM_PUBLIC_IP>
    ```
 
 6. Use with Ansible inventory:
    ```ini
    [rhel]
-   rhel-safe ansible_host=127.0.0.1 ansible_port=50022 ansible_user=azureuser ansible_ssh_private_key_file=~/.ssh/id_ed25519
+   rhel-safe ansible_host=<VM_PUBLIC_IP> ansible_user=azureuser ansible_ssh_private_key_file=~/.ssh/id_ed25519
    ```
+
+## Ansible: Install Go + .NET 10
+
+Run the included playbook from WSL, Linux, or another Unix-like shell. Native Windows PowerShell with the Windows Python build can fail with `WinError 1` before Ansible starts.
+
+```bash
+cd ansible
+ansible-playbook -i inventory.ini setup-golang-dotnet10.yml
+```
+
+If you prefer to stay at the repo root, use:
+
+```bash
+ansible-playbook -i ansible/inventory.ini ansible/setup-golang-dotnet10.yml
+```
 
 ## Destroy
 ```bash
