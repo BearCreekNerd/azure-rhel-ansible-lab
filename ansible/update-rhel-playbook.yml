@@ -1,0 +1,12 @@
+#ansible playbook to update RHEL system packages
+---
+- name: Update RHEL system packages
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Update all packages to the latest version
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest

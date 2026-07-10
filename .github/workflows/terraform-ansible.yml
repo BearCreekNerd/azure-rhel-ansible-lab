@@ -1,0 +1,112 @@
+name: Terraform + Ansible
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "**/*.tf"
+      - "ansible/**/*.yml"
+      - ".github/workflows/terraform-ansible.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  provision-and-configure:
+    runs-on: ubuntu-latest
+    env:
+      TF_IN_AUTOMATION: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Write SSH keys for Terraform and Ansible
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.ssh"
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "${{ secrets.SSH_PUBLIC_KEY }}" > "$HOME/.ssh/id_ed25519.pub"
+          chmod 644 "$HOME/.ssh/id_ed25519.pub"
+
+      - name: Terraform init
+        shell: bash
+        run: terraform init
+
+      - name: Terraform validate
+        shell: bash
+        run: terraform validate
+
+      - name: Terraform plan
+        shell: bash
+        run: terraform plan -out tfplan -var "ssh_public_key_path=$HOME/.ssh/id_ed25519.pub"
+
+      - name: Terraform apply
+        shell: bash
+        run: terraform apply -auto-approve tfplan
+
+      - name: Capture Terraform outputs
+        id: tf_outputs
+        shell: bash
+        run: |
+          echo "vm_public_ip=$(terraform output -raw vm_public_ip)" >> "$GITHUB_OUTPUT"
+          echo "admin_username=$(terraform output -raw admin_username)" >> "$GITHUB_OUTPUT"
+
+      - name: Add VM host key to known_hosts
+        shell: bash
+        run: |
+          ssh-keygen -R "${{ steps.tf_outputs.outputs.vm_public_ip }}" || true
+          ssh-keyscan -H "${{ steps.tf_outputs.outputs.vm_public_ip }}" >> "$HOME/.ssh/known_hosts"
+
+      - name: Wait for SSH availability
+        shell: bash
+        run: |
+          for i in {1..30}; do
+            if ssh \
+              -i "$HOME/.ssh/id_ed25519" \
+              -o BatchMode=yes \
+              -o ConnectTimeout=10 \
+              "${{ steps.tf_outputs.outputs.admin_username }}@${{ steps.tf_outputs.outputs.vm_public_ip }}" \
+              "echo ready"; then
+              exit 0
+            fi
+            echo "SSH not ready yet, retrying... ($i/30)"
+            sleep 10
+          done
+          echo "Timed out waiting for SSH"
+          exit 1
+
+      - name: Install Ansible
+        shell: bash
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install ansible
+
+      - name: Build dynamic Ansible inventory
+        shell: bash
+        run: |
+          cat > ansible/inventory.ci.ini <<EOF
+          [rhel]
+          rhel-safe ansible_host=${{ steps.tf_outputs.outputs.vm_public_ip }} ansible_user=${{ steps.tf_outputs.outputs.admin_username }} ansible_ssh_private_key_file=$HOME/.ssh/id_ed25519 ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new'
+          EOF
+      - name: Run Ansible update playbook
+        shell: bash
+        run: ansible-playbook -i ansible/inventory.ci.ini ansible/update-rhel-playbook.yml
+    
+      - name: Run Ansible setup playbook
+        shell: bash
+        run: ansible-playbook -i ansible/inventory.ci.ini ansible/setup-golang-dotnet10.yml

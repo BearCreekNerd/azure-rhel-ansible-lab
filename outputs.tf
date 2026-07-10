@@ -17,3 +17,7 @@ output "vm_public_ip" {
 output "vm_id" {
   value = azurerm_linux_virtual_machine.rhel_vm.id
 }
+
+output "admin_username" {
+  value = var.admin_username
+}

@@ -83,3 +83,71 @@ If you see `Failed to validate GPG signature ... Public key for packages-microso
 ```bash
 terraform destroy
 ```
+
+## GitHub Actions: Terraform + Ansible
+
+This repo includes a workflow at `.github/workflows/terraform-ansible.yml` that:
+- logs into Azure
+- runs `terraform init/plan/apply`
+- creates a dynamic Ansible inventory from Terraform outputs
+- runs both playbooks:
+   - `ansible/setup-golang-dotnet10.yml`
+   - `ansible/update-rhel-playbook.yml`
+
+Required repository secrets:
+- `AZURE_CLIENT_ID` (app registration / service principal application ID)
+- `AZURE_TENANT_ID` (Microsoft Entra tenant ID)
+- `AZURE_SUBSCRIPTION_ID` (Azure subscription ID)
+- `SSH_PRIVATE_KEY` (private key matching the public key below)
+- `SSH_PUBLIC_KEY` (public key used by Terraform for VM provisioning)
+
+OIDC setup (recommended, no long-lived Azure client secret):
+
+1. Create an app registration and service principal:
+
+   ```bash
+   az ad app create --display-name "gha-azure-rhel-ansible-lab"
+   APP_ID=$(az ad app list --display-name "gha-azure-rhel-ansible-lab" --query "[0].appId" -o tsv)
+   az ad sp create --id "$APP_ID"
+   ```
+
+2. Grant RBAC to your scope (resource group preferred):
+
+   ```bash
+   SUBSCRIPTION_ID="<SUBSCRIPTION_ID>"
+   RESOURCE_GROUP="<RESOURCE_GROUP_NAME>"
+   az role assignment create \
+     --assignee "$APP_ID" \
+     --role Contributor \
+     --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP"
+   ```
+
+3. Add a federated credential for this repo/branch:
+
+   ```bash
+   APP_OBJECT_ID=$(az ad app list --display-name "gha-azure-rhel-ansible-lab" --query "[0].id" -o tsv)
+   cat > federated-credential.json <<'EOF'
+   {
+     "name": "github-main-branch",
+     "issuer": "https://token.actions.githubusercontent.com",
+     "subject": "repo:BearCreekNerd/azure-rhel-ansible-lab:ref:refs/heads/main",
+     "description": "GitHub Actions access for main branch",
+     "audiences": ["api://AzureADTokenExchange"]
+   }
+   EOF
+   az ad app federated-credential create --id "$APP_OBJECT_ID" --parameters federated-credential.json
+   ```
+
+4. Save these repo secrets in GitHub:
+
+   ```text
+   AZURE_CLIENT_ID=<APP_ID>
+   AZURE_TENANT_ID=<TENANT_ID>
+   AZURE_SUBSCRIPTION_ID=<SUBSCRIPTION_ID>
+   SSH_PRIVATE_KEY=<private key content>
+   SSH_PUBLIC_KEY=<public key content>
+   ```
+
+Trigger options:
+- manual: Actions -> Terraform + Ansible -> Run workflow
+- automatic on push to `main` when Terraform, Ansible, or workflow files change
