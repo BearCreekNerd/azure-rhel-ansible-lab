@@ -38,6 +38,7 @@ jobs:
       - name: Compute remote state backend names
         shell: bash
         run: |
+          set -euo pipefail
           repo_name="${GITHUB_REPOSITORY#*/}"
           repo_name_lower="$(echo "$repo_name" | tr '[:upper:]' '[:lower:]')"
           sanitized_repo_name="$(echo "$repo_name_lower" | tr -cd 'a-z0-9')"
@@ -45,10 +46,16 @@ jobs:
           subscription_suffix="$(echo "${{ secrets.AZURE_SUBSCRIPTION_ID }}" | tr -d '-' | tr '[:upper:]' '[:lower:]' | cut -c1-8)"
 
           if [ -z "$storage_name_prefix" ]; then
-            storage_name_prefix="tfstate"
+            storage_name_prefix="$(echo "repo${GITHUB_REPOSITORY_ID}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9')"
+            storage_name_prefix="${storage_name_prefix:0:14}"
           fi
 
+          # Keep this naming pattern aligned with the README remote state documentation.
           echo "TF_STATE_RESOURCE_GROUP=rg-${repo_name_lower}-tfstate" >> "$GITHUB_ENV"
+          # Azure storage account names are limited to 24 characters, so this uses:
+          # - 2 characters for the `st` prefix
+          # - 14 characters from the sanitized repo name
+          # - 8 characters from the subscription ID suffix
           echo "TF_STATE_STORAGE_ACCOUNT=st${storage_name_prefix}${subscription_suffix}" >> "$GITHUB_ENV"
           echo "TF_STATE_CONTAINER=tfstate" >> "$GITHUB_ENV"
           echo "TF_STATE_KEY=${repo_name_lower}.tfstate" >> "$GITHUB_ENV"
@@ -56,6 +63,7 @@ jobs:
       - name: Ensure Azure remote state backend exists
         shell: bash
         run: |
+          set -euo pipefail
           az group create \
             --name "$TF_STATE_RESOURCE_GROUP" \
             --location eastus
@@ -75,6 +83,11 @@ jobs:
             --resource-group "$TF_STATE_RESOURCE_GROUP" \
             --query '[0].value' \
             --output tsv)"
+
+          if [ -z "$state_access_key" ]; then
+            echo "Failed to retrieve the Terraform state storage account access key." >&2
+            exit 1
+          fi
 
           echo "::add-mask::$state_access_key"
           echo "TF_STATE_ACCESS_KEY=$state_access_key" >> "$GITHUB_ENV"
