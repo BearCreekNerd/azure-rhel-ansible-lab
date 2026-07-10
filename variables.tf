@@ -31,6 +31,11 @@ variable "vm_size" {
 variable "ssh_public_key" {
   type        = string
   description = "SSH public key content (e.g. ssh-ed25519 AAAA... user@host)"
+
+  validation {
+    condition     = can(regex("^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521) ", var.ssh_public_key))
+    error_message = "ssh_public_key must be a valid OpenSSH public key starting with ssh-ed25519, ssh-rsa, or ecdsa-sha2-*."
+  }
 }
 
 variable "ssh_source_cidr" {
