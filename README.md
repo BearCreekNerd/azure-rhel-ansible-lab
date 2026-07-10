@@ -112,16 +112,16 @@ This repo includes a workflow at `.github/workflows/terraform-ansible.yml` that:
 ### Remote state backend
 
 GitHub Actions bootstraps a dedicated backend automatically before `terraform init`:
-- resource group: `rg-azure-rhel-ansible-lab-tfstate`
+- resource group: `rg-<lowercase repo name>-tfstate` (for this repo: `rg-azure-rhel-ansible-lab-tfstate`)
 - container: `tfstate`
-- state key: `azure-rhel-ansible-lab.tfstate`
-- storage account name: derived from the repo name plus the first 8 characters of `AZURE_SUBSCRIPTION_ID`
+- state key: `<lowercase repo name>.tfstate` (for this repo: `azure-rhel-ansible-lab.tfstate`)
+- storage account name: `st<first 14 alphanumeric chars of the lowercase repo name><first 8 chars of AZURE_SUBSCRIPTION_ID without hyphens>`
 
 No additional GitHub secret is required for the backend. The workflow reuses the existing Azure OIDC secrets to create the storage account, then retrieves the storage account access key during the run and passes it to `terraform init`.
 
 ### Setting your SSH public key secret
 
-Terraform reads your SSH public key from the `TF_VAR_ssh_public_key` secret so the VM is provisioned with your laptop's key, enabling direct SSH access. Set it once with:
+Terraform reads your SSH public key from the `TF_VAR_ssh_public_key` secret so the VM is provisioned with your laptop's key, enabling direct SSH access. The `TF_VAR_` prefix is required because Terraform automatically maps environment variables with that prefix to input variables. Set it once with:
 
 ```bash
 gh secret set TF_VAR_ssh_public_key --repo BearCreekNerd/azure-rhel-ansible-lab < ~/.ssh/id_ed25519.pub

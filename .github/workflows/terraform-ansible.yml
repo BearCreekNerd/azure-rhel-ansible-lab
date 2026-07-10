@@ -39,7 +39,8 @@ jobs:
         shell: bash
         run: |
           repo_name="${GITHUB_REPOSITORY#*/}"
-          sanitized_repo_name="$(echo "$repo_name" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9')"
+          repo_name_lower="$(echo "$repo_name" | tr '[:upper:]' '[:lower:]')"
+          sanitized_repo_name="$(echo "$repo_name_lower" | tr -cd 'a-z0-9')"
           storage_name_prefix="${sanitized_repo_name:0:14}"
           subscription_suffix="$(echo "${{ secrets.AZURE_SUBSCRIPTION_ID }}" | tr -d '-' | tr '[:upper:]' '[:lower:]' | cut -c1-8)"
 
@@ -47,10 +48,10 @@ jobs:
             storage_name_prefix="tfstate"
           fi
 
-          echo "TF_STATE_RESOURCE_GROUP=rg-${repo_name}-tfstate" >> "$GITHUB_ENV"
+          echo "TF_STATE_RESOURCE_GROUP=rg-${repo_name_lower}-tfstate" >> "$GITHUB_ENV"
           echo "TF_STATE_STORAGE_ACCOUNT=st${storage_name_prefix}${subscription_suffix}" >> "$GITHUB_ENV"
           echo "TF_STATE_CONTAINER=tfstate" >> "$GITHUB_ENV"
-          echo "TF_STATE_KEY=${repo_name}.tfstate" >> "$GITHUB_ENV"
+          echo "TF_STATE_KEY=${repo_name_lower}.tfstate" >> "$GITHUB_ENV"
 
       - name: Ensure Azure remote state backend exists
         shell: bash
