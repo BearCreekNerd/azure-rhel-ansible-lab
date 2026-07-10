@@ -34,6 +34,12 @@ variable "ssh_public_key_path" {
   default     = "~/.ssh/id_ed25519.pub"
 }
 
+variable "ssh_source_cidr" {
+  type        = string
+  description = "CIDR allowed to SSH to the VM"
+  default     = "0.0.0.0/0"
+}
+
 variable "vnet_name" {
   type        = string
   default     = "vnet-ansible-safe"
@@ -54,12 +60,6 @@ variable "workload_subnet_cidr" {
   default     = "10.20.1.0/24"
 }
 
-variable "bastion_subnet_cidr" {
-  type        = string
-  description = "Must be /26 or larger for Bastion"
-  default     = "10.20.2.0/26"
-}
-
 variable "nsg_name" {
   type        = string
   default     = "nsg-workload"
@@ -70,12 +70,7 @@ variable "nic_name" {
   default     = "nic-rhel-safe-01"
 }
 
-variable "bastion_name" {
+variable "vm_public_ip_name" {
   type        = string
-  default     = "bas-ansible-safe"
-}
-
-variable "bastion_pip_name" {
-  type        = string
-  default     = "pip-bastion-ansible-safe"
+  default     = "pip-rhel-safe-01"
 }

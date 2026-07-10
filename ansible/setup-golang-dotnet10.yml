@@ -1,0 +1,52 @@
+---
+- name: Install Go and .NET 10 on RHEL
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    dotnet_repo_rpm_url: "https://packages.microsoft.com/config/rhel/9/packages-microsoft-prod.rpm"
+    dotnet_repo_rpm_path: "/tmp/packages-microsoft-prod.rpm"
+    dotnet_sdk_package: "dotnet-sdk-10.0"
+
+  tasks:
+    - name: Ensure base dependencies are present
+      ansible.builtin.dnf:
+        name:
+          - ca-certificates
+          - dnf-plugins-core
+        state: present
+
+    - name: Download Microsoft package repository RPM
+      ansible.builtin.get_url:
+        url: "{{ dotnet_repo_rpm_url }}"
+        dest: "{{ dotnet_repo_rpm_path }}"
+        mode: "0644"
+
+    - name: Install Microsoft package repository
+      ansible.builtin.dnf:
+        name: "{{ dotnet_repo_rpm_path }}"
+        state: present
+
+    - name: Install Go and .NET 10 SDK
+      ansible.builtin.dnf:
+        name:
+          - golang
+          - "{{ dotnet_sdk_package }}"
+        state: present
+
+    - name: Verify Go installation
+      ansible.builtin.command: go version
+      register: go_version
+      changed_when: false
+
+    - name: Verify .NET installation
+      ansible.builtin.command: dotnet --version
+      register: dotnet_version
+      changed_when: false
+
+    - name: Show installed versions
+      ansible.builtin.debug:
+        msg:
+          - "{{ go_version.stdout }}"
+          - "dotnet {{ dotnet_version.stdout }}"

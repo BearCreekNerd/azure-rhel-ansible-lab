@@ -10,12 +10,8 @@ output "vm_private_ip" {
   value = azurerm_network_interface.vm_nic.private_ip_address
 }
 
-output "bastion_name" {
-  value = azurerm_bastion_host.bastion.name
-}
-
-output "bastion_resource_group" {
-  value = azurerm_resource_group.rg.name
+output "vm_public_ip" {
+  value = azurerm_public_ip.vm_pip.ip_address
 }
 
 output "vm_id" {
