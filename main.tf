@@ -77,10 +77,6 @@ resource "azurerm_network_interface" "vm_nic" {
   }
 }
 
-locals {
-  ssh_public_key = file(pathexpand(var.ssh_public_key_path))
-}
-
 resource "azurerm_linux_virtual_machine" "rhel_vm" {
   name                            = var.vm_name
   resource_group_name             = azurerm_resource_group.rg.name
@@ -92,7 +88,7 @@ resource "azurerm_linux_virtual_machine" "rhel_vm" {
 
   admin_ssh_key {
     username   = var.admin_username
-    public_key = local.ssh_public_key
+    public_key = var.ssh_public_key
   }
 
   os_disk {

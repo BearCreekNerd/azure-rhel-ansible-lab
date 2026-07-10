@@ -94,12 +94,26 @@ This repo includes a workflow at `.github/workflows/terraform-ansible.yml` that:
    - `ansible/setup-golang-dotnet10.yml`
    - `ansible/update-rhel-playbook.yml`
 
+### Setting your SSH public key secret
+
+Terraform reads your SSH public key from the `TF_VAR_ssh_public_key` secret so the VM is provisioned with your laptop's key, enabling direct SSH access. Set it once with:
+
+```bash
+gh secret set TF_VAR_ssh_public_key --repo BearCreekNerd/azure-rhel-ansible-lab < ~/.ssh/id_ed25519.pub
+```
+
+If your key is RSA instead:
+
+```bash
+gh secret set TF_VAR_ssh_public_key --repo BearCreekNerd/azure-rhel-ansible-lab < ~/.ssh/id_rsa.pub
+```
+
 Required repository secrets:
 - `AZURE_CLIENT_ID` (app registration / service principal application ID)
 - `AZURE_TENANT_ID` (Microsoft Entra tenant ID)
 - `AZURE_SUBSCRIPTION_ID` (Azure subscription ID)
 - `SSH_PRIVATE_KEY` (private key matching the public key below)
-- `SSH_PUBLIC_KEY` (public key used by Terraform for VM provisioning)
+- `TF_VAR_ssh_public_key` (public key content used by Terraform for VM provisioning)
 
 OIDC setup (recommended, no long-lived Azure client secret):
 

@@ -28,10 +28,9 @@ variable "vm_size" {
   default     = "Standard_B2s"
 }
 
-variable "ssh_public_key_path" {
+variable "ssh_public_key" {
   type        = string
-  description = "Path to SSH public key"
-  default     = "~/.ssh/id_ed25519.pub"
+  description = "SSH public key content (e.g. ssh-ed25519 AAAA... user@host)"
 }
 
 variable "ssh_source_cidr" {
