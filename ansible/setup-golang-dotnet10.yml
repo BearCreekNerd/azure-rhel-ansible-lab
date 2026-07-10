@@ -7,6 +7,7 @@
   vars:
     dotnet_repo_rpm_url: "https://packages.microsoft.com/config/rhel/9/packages-microsoft-prod.rpm"
     dotnet_repo_rpm_path: "/tmp/packages-microsoft-prod.rpm"
+    dotnet_repo_gpg_key_url: "https://packages.microsoft.com/keys/microsoft.asc"
     dotnet_sdk_package: "dotnet-sdk-10.0"
 
   tasks:
@@ -22,6 +23,11 @@
         url: "{{ dotnet_repo_rpm_url }}"
         dest: "{{ dotnet_repo_rpm_path }}"
         mode: "0644"
+
+    - name: Import Microsoft RPM signing key
+      ansible.builtin.rpm_key:
+        key: "{{ dotnet_repo_gpg_key_url }}"
+        state: present
 
     - name: Install Microsoft package repository
       ansible.builtin.dnf:

@@ -63,6 +63,22 @@ If you prefer to stay at the repo root, use:
 ansible-playbook -i ansible/inventory.ini ansible/setup-golang-dotnet10.yml
 ```
 
+If you see `Host key verification failed`, your VM host key in `~/.ssh/known_hosts` is missing or stale (common after VM re-create). Fix it with:
+
+```bash
+ssh-keygen -R <VM_PUBLIC_IP>
+ssh-keyscan -H <VM_PUBLIC_IP> >> ~/.ssh/known_hosts
+ssh azureuser@<VM_PUBLIC_IP>
+```
+
+Then validate Ansible connectivity before running the full playbook:
+
+```bash
+ansible -i ansible/inventory.ini all -m ping
+```
+
+If you see `Failed to validate GPG signature ... Public key for packages-microsoft-prod.rpm is not installed`, pull the latest playbook and rerun. The playbook imports Microsoft's RPM signing key before installing the repo package.
+
 ## Destroy
 ```bash
 terraform destroy
